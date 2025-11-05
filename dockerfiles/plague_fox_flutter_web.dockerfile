@@ -32,7 +32,7 @@ COPY . /app
 RUN set -eux; flutter config --enable-web \
 && flutter precache --web
 
-RUN flutter
+RUN flutter --version
 
 #RUN flutter clean && flutter pub get && flutter build web --release
 #

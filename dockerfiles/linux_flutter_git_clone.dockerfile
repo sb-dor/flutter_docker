@@ -1,4 +1,4 @@
-FROM ubuntu:25.04 as linux_flutter_git_pull
+FROM ubuntu:25.04 as linux_flutter_git_clone
 
 ARG FLUTTER_SDK=/opt/flutter
 ARG FLUTTER_VERSION=3.35.5
@@ -20,8 +20,6 @@ RUN mkdir $APP && git clone https://github.com/sb-dor/simple_pos.git $APP
 # stup new folder as the working directory
 WORKDIR $APP
 
-RUN git pull
-
 RUN flutter clean && flutter pub get  \
     && dart run build_runner build --delete-conflicting-outputs --release \
     && flutter build web --release
@@ -30,7 +28,7 @@ RUN flutter clean && flutter pub get  \
 FROM nginx:1.25.2-alpine
 
 # copy the info of the builded web app to nginx
-COPY --from=linux_flutter_git_pull /app/build/web /usr/share/nginx/html
+COPY --from=linux_flutter_git_clone /app/build/web /usr/share/nginx/html
 
 # Expose and run nginx
 EXPOSE 80
