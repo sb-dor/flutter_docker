@@ -36,7 +36,7 @@ class _AppState extends State<App> {
           onPressed: () => setState(() {
             _counter++;
           }),
-          child: Text("$_counter"),
+          child: Text("Counter changed: $_counter"),
         ),
       ),
     );
