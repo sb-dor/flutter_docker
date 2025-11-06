@@ -1,4 +1,4 @@
-ARG VERSION="3.35.5"
+ARG VERSION="stable"
 
 # ------------------------------
 # Build minifier binary
@@ -9,42 +9,50 @@ WORKDIR /build
 
 # Compile minify as a static binary
 RUN apk add --no-cache git && \
-git clone -b master --depth 1 https://github.com/tdewolff/minify.git && \
-cd /build/minify/cmd/minify && \
-CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o /out/minify . && \
-chmod +x /out/minify
+    git clone -b master --depth 1 https://github.com/tdewolff/minify.git && \
+    cd /build/minify/cmd/minify && \
+    CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o /out/minify . && \
+    chmod +x /out/minify
 
 # ------------------------------
 # Flutter web development image
 # ------------------------------
-FROM plugfox/flutter:${VERSION} AS web-build
+FROM plugfox/flutter:${VERSION}
+
+# https://hub.docker.com/r/plugfox/flutter
+ARG MAIN_FOLDER=/main_folder
+ARG APP=/app
 
 USER root
-WORKDIR /app
 
-# Copy the minify binary from the builder stage
-#COPY --from=minifier-builder /out/ /bin/
+# Создать корневую папку
+RUN mkdir -p $MAIN_FOLDER
 
-# Copy Flutter project into container
-COPY . /app
+WORKDIR $MAIN_FOLDER
 
-# Setup flutter tools for web developement
-RUN set -eux; flutter config --enable-web \
-&& flutter precache --web
+# Copy minify binary
+COPY --from=minifier-builder /out/ /bin/
 
-RUN flutter --version
+# Создать папку приложения
+RUN mkdir -p $APP
 
-#RUN flutter clean && flutter pub get && flutter build web --release
-#
-#RUN find build/web -type f -name "*.js" -o -name "*.css" -o -name "*.html" \
-#    -exec minify {} -o {} \;
-#
-#FROM nginx:alpine
-#
-#WORKDIR /usr/share/nginx/html
-#
-## Copy built and minified web app
-#COPY --from=web-build /app/build/web .
-#
-#EXPOSE 80
-#CMD ["nginx", "-g", "daemon off;"]
+# Перейти в папку приложения
+WORKDIR $APP
+
+# Скопировать проект внутрь
+COPY . .
+
+# CMD для проверки
+CMD ["bash", "-c", "\
+    echo PWD=$(pwd); \
+    ls -la; \
+    echo 'Directories:'; \
+    ls -d */ 2>/dev/null || echo 'No dirs found'; \
+    flutter clean && \
+    flutter pub get && \
+    flutter run -d web-server --release \
+      --dart-define=FAKE=true \
+      --device-id=web-server \
+      --web-port=4000 \
+      --web-hostname=192.168.100.70 \
+"]
