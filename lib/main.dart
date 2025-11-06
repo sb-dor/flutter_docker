@@ -26,8 +26,19 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
+  int _counter = 0;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Text("TEST")));
+    return Scaffold(
+      body: Center(
+        child: TextButton(
+          onPressed: () => setState(() {
+            _counter++;
+          }),
+          child: Text("$_counter"),
+        ),
+      ),
+    );
   }
 }

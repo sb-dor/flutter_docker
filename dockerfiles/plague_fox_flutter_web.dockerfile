@@ -17,7 +17,7 @@ RUN apk add --no-cache git && \
 # ------------------------------
 # Flutter web development image
 # ------------------------------
-FROM plugfox/flutter:${VERSION}
+FROM plugfox/flutter:${VERSION} AS build-flutter-web
 
 # https://hub.docker.com/r/plugfox/flutter
 ARG MAIN_FOLDER=/main_folder
@@ -43,16 +43,24 @@ WORKDIR $APP
 COPY . .
 
 # CMD для проверки
-CMD ["bash", "-c", "\
-    echo PWD=$(pwd); \
-    ls -la; \
-    echo 'Directories:'; \
-    ls -d */ 2>/dev/null || echo 'No dirs found'; \
-    flutter clean && \
+RUN flutter clean && \
     flutter pub get && \
-    flutter run -d web-server --release \
-      --dart-define=FAKE=true \
-      --device-id=web-server \
-      --web-port=4000 \
-      --web-hostname=192.168.100.70 \
-"]
+    flutter build web --release && \
+    cd build/web && \
+    mv index.html index.src.html && \
+    minify --output index.html index.src.html
+
+# ------------------------------
+# Stage 3: Nginx to serve Flutter Web
+# ------------------------------
+FROM nginx:alpine
+
+# Копируем готовый web из build-flutter-web
+COPY --from=build-flutter-web /app/build/web /usr/share/nginx/html
+
+# Expose порт
+EXPOSE 80
+
+# Запуск Nginx
+CMD ["nginx", "-g", "daemon off;"]
+
